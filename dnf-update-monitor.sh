@@ -1,6 +1,6 @@
 #!/bin/bash
 # Source      : https://github.com/nocturnalismee/dnf-update-monitor
-# Version     : 1.0
+# Version     : 1.1
 # License     : MIT
 # Description : This bash script is for checking updates via dnf and can send messages to telegram after checking.
 
@@ -42,6 +42,7 @@ validate_config() {
         exit 1
     fi
 }
+
 # Send Telegram notification
 send_telegram() {
     local message="$1"
@@ -91,7 +92,6 @@ rotate_logs() {
 }
 
 # Extract package summary from dnf log
-
 get_package_summary() {
     local logfile="$1"
     local summary
@@ -108,7 +108,6 @@ get_package_summary() {
 }
 
 # Check if a reboot is required after the update
-
 check_reboot_required() {
     if ! command -v needs-restarting &>/dev/null; then
         echo "Unable to check (needs-restarting not available)"
@@ -140,33 +139,9 @@ main() {
     log "  Host: ${HOSTNAME}"
     log "---------------------------------------------"
 
-    # STEP 1 — REFRESH METADATA REPO
-    log "STEP 1/3 - Refreshing repository metadata (makecache)..."
-
-    dnf makecache -q >> "$LOG_FILE" 2>&1
-    local makecache_status=$?
-
-    if (( makecache_status != 0 )); then
-        log "WARNING: dnf makecache failed (exit code: ${makecache_status}). Proceeding with existing cache..."
-
-        send_telegram "⚠️ <b>${HOSTNAME} - DNF Makecache WARNING</b>
-<pre>
-Time      : ${START_TIME}
-
-dnf makecache failed (exit code: ${makecache_status}).
-The update process will continue using the existing cache.
-
-Log       : ${LOG_FILE}
-</pre>"
-
-    else
-        log "Repository metadata successfully refreshed."
-    fi
-
-    # STEP 2 — CHECK FOR UPDATES
+    # STEP 1 — CHECK FOR UPDATES
     # dnf check-update: 0 = no updates, 100 = updates available, other = error
-
-    log "STEP 2/3 - Checking for available updates..."
+    log "STEP 1/2 - Checking for available updates..."
 
     dnf check-update -q >> "$LOG_FILE" 2>&1
     local check_status=$?
@@ -200,8 +175,8 @@ Log       : ${LOG_FILE}
         exit 1
     fi
 
-    # STEP 3 — RUN UPDATE
-    log "STEP 3/3 - Updates available. Starting the update process..."
+    # STEP 2 — RUN UPDATE
+    log "STEP 2/2 - Updates available. Starting the update process..."
 
     dnf -y update >> "$LOG_FILE" 2>&1
     local update_status=$?
